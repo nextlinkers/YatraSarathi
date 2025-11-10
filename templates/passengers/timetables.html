@@ -1,0 +1,234 @@
+{% extends "base.html" %}
+
+{% block title %}Bus Timetables{% endblock %}
+
+{% block extra_css %}
+<style>
+    .timetable-card {
+        border-left: 4px solid #007bff;
+        transition: transform 0.2s;
+        margin-bottom: 1rem;
+    }
+    .timetable-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .local-bus { border-left-color: #28a745; }
+    .private-bus { border-left-color: #ffc107; }
+    .time-badge {
+        font-size: 1.1rem;
+        font-weight: bold;
+        padding: 0.5rem 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="bi bi-clock-history"></i> Bus Timetables</h2>
+            <p class="text-muted">View detailed schedules for local and private bus services</p>
+        </div>
+    </div>
+
+    <!-- Filter Form -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="GET" class="row g-3">
+                <div class="col-md-5">
+                    <label class="form-label"><strong>From</strong></label>
+                    <input type="text" class="form-control" name="origin" value="{{ origin }}" 
+                           placeholder="Enter origin city" list="citiesList">
+                </div>
+                <div class="col-md-5">
+                    <label class="form-label"><strong>To</strong></label>
+                    <input type="text" class="form-control" name="destination" value="{{ destination }}" 
+                           placeholder="Enter destination city" list="citiesList">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">&nbsp;</label>
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-search"></i> Search
+                    </button>
+                </div>
+            </form>
+            <datalist id="citiesList">
+                {% for city in all_cities %}
+                <option value="{{ city }}">
+                {% endfor %}
+            </datalist>
+        </div>
+    </div>
+
+    <!-- Local Buses Timetable -->
+    <div class="card mb-4">
+        <div class="card-header bg-success text-white">
+            <h5 class="mb-0">
+                <i class="bi bi-bus-front"></i> Local Bus Services
+                <span class="badge bg-light text-dark ms-2">{{ local_buses|length }} buses</span>
+            </h5>
+        </div>
+        <div class="card-body">
+            {% if local_buses %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Bus Number</th>
+                            <th>Operator</th>
+                            <th>Route</th>
+                            <th>Departure</th>
+                            <th>Arrival</th>
+                            <th>Duration</th>
+                            <th>Fare</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for bus in local_buses %}
+                        <tr class="timetable-card local-bus">
+                            <td><strong>{{ bus.bus_number }}</strong></td>
+                            <td>{{ bus.operator_name }}</td>
+                            <td>
+                                <strong>{{ bus.origin }}</strong> 
+                                <i class="bi bi-arrow-right"></i> 
+                                <strong>{{ bus.destination }}</strong>
+                                {% if bus.via_stops %}
+                                <br><small class="text-muted">Via: {{ bus.via_stops|join(', ') }}</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge bg-primary time-badge">
+                                    {{ bus.departure_time.strftime('%H:%M') if bus.departure_time else 'N/A' }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge bg-info time-badge">
+                                    {{ bus.arrival_time.strftime('%H:%M') if bus.arrival_time else 'N/A' }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if bus.departure_time and bus.arrival_time %}
+                                    {% set dep = bus.departure_time %}
+                                    {% set arr = bus.arrival_time %}
+                                    {% set duration = ((arr.hour * 60 + arr.minute) - (dep.hour * 60 + dep.minute)) %}
+                                    {% if duration < 0 %}{% set duration = duration + 1440 %}{% endif %}
+                                    {{ duration // 60 }}h {{ duration % 60 }}m
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </td>
+                            <td><strong>₹{{ bus.fare }}</strong></td>
+                            <td>
+                                <span class="badge bg-{{ 'success' if bus.status == 'running' else 'warning' if bus.status == 'delayed' else 'primary' }}">
+                                    {{ bus.status|title }}
+                                </span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-center text-muted">No local bus services found for this route.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Private Buses Timetable -->
+    <div class="card mb-4">
+        <div class="card-header bg-warning text-dark">
+            <h5 class="mb-0">
+                <i class="bi bi-bus-front-fill"></i> Private Bus Operators (Long Distance)
+                <span class="badge bg-dark text-light ms-2">{{ private_buses|length }} buses</span>
+            </h5>
+        </div>
+        <div class="card-body">
+            {% if private_buses %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Bus Number</th>
+                            <th>Operator</th>
+                            <th>Route</th>
+                            <th>Departure</th>
+                            <th>Arrival</th>
+                            <th>Duration</th>
+                            <th>Fare</th>
+                            <th>Bus Type</th>
+                            <th>Rating</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for bus in private_buses %}
+                        <tr class="timetable-card private-bus">
+                            <td><strong>{{ bus.bus_number }}</strong></td>
+                            <td>{{ bus.operator_name }}</td>
+                            <td>
+                                <strong>{{ bus.origin }}</strong> 
+                                <i class="bi bi-arrow-right"></i> 
+                                <strong>{{ bus.destination }}</strong>
+                                {% if bus.via_stops %}
+                                <br><small class="text-muted">Via: {{ bus.via_stops|join(', ') }}</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge bg-primary time-badge">
+                                    {{ bus.departure_time.strftime('%H:%M') if bus.departure_time else 'N/A' }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge bg-info time-badge">
+                                    {{ bus.arrival_time.strftime('%H:%M') if bus.arrival_time else 'N/A' }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if bus.duration %}
+                                    {{ bus.duration }}
+                                {% elif bus.departure_time and bus.arrival_time %}
+                                    {% set dep = bus.departure_time %}
+                                    {% set arr = bus.arrival_time %}
+                                    {% set duration = ((arr.hour * 60 + arr.minute) - (dep.hour * 60 + dep.minute)) %}
+                                    {% if duration < 0 %}{% set duration = duration + 1440 %}{% endif %}
+                                    {{ duration // 60 }}h {{ duration % 60 }}m
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </td>
+                            <td><strong>₹{{ bus.fare }}</strong></td>
+                            <td><small>{{ bus.bus_type }}</small></td>
+                            <td>
+                                {% if bus.rating > 0 %}
+                                <span class="badge bg-warning">
+                                    <i class="bi bi-star-fill"></i> {{ bus.rating }}
+                                </span>
+                                {% else %}
+                                <small class="text-muted">N/A</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge bg-{{ 'success' if bus.status == 'running' else 'warning' if bus.status == 'delayed' else 'primary' }}">
+                                    {{ bus.status|title }}
+                                </span>
+                                {% if bus.live_tracking %}
+                                <br><small class="badge bg-success mt-1">
+                                    <i class="bi bi-geo-alt-fill"></i> Live Tracking
+                                </small>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-center text-muted">No private bus services found for this route.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+

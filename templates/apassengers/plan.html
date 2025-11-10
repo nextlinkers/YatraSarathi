@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plan Your Travel</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        body { 
+            font-family: Verdana, Geneva, Tahoma, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background-attachment: fixed;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        * { font-family: Verdana, Geneva, Tahoma, sans-serif !important; }
+        footer { 
+            background: #f8f9fa;
+            margin-top: auto;
+        }
+        
+        .route-card {
+            background: white;
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .route-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+        
+        .route-header {
+            border-left: 4px solid #0d6efd;
+            padding-left: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .badge-pulse {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .route-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+    </style>
+</head>
+<body>
+<nav class="navbar navbar-expand-lg navbar-dark" style="background: rgba(0,0,0,0.5); backdrop-filter: blur(10px);">
+    <div class="container">
+        <a class="navbar-brand" href="{{ url_for('passengers_home') }}">
+            <i class="bi bi-bus-front"></i> Yatra Saarthi
+        </a>
+        <div class="ms-auto">
+            <a href="{{ url_for('travel_guide') }}" class="btn btn-outline-success btn-sm me-2" data-en="Travel Guide" data-ta="பயண வழிகாட்டி">
+                <i class="bi bi-signpost-split"></i> Travel Guide
+            </a>
+            <button type="button" class="btn btn-outline-light btn-sm me-2" onclick="changeLang(currentLang === 'en' ? 'ta' : 'en')">
+                <i class="bi bi-translate"></i> <span id="langText">தமிழ்</span>
+            </button>
+            <a class="btn btn-outline-light btn-sm" href="{{ url_for('login') }}">Admin Login</a>
+        </div>
+    </div>
+</nav>
+
+<div class="container py-4">
+    <div class="card shadow-lg" style="background: rgba(255,255,255,0.98); border-radius: 15px;">
+        <div class="card-body p-4">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="mb-0" data-en="Plan Your Journey" data-ta="உங்கள் பயணத்தைத் திட்டமிடுங்கள்">Plan Your Journey</h2>
+                <a href="{{ url_for('travel_guide') }}" class="btn btn-outline-success" data-en="Travel Guide" data-ta="பயண வழிகாட்டி">
+                    <i class="bi bi-signpost-split"></i> Travel Guide
+                </a>
+            </div>
+            
+            <form method="GET" class="mb-4" id="routeForm">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label"><strong data-en="From" data-ta="இருந்து">From</strong></label>
+                        <select class="form-select" name="origin" id="originSelect" required>
+                            <option value="" data-en="Select origin" data-ta="தொடக்க புள்ளியைத் தேர்ந்தெடுக்கவும்">Select origin</option>
+                            {% for p in places %}
+                            <option value="{{ p }}" {{ p == q.origin and 'selected' or '' }}>{{ p }}</option>
+                            {% endfor %}
+                        </select>
+                        <small class="text-muted" data-en="Your boarding point" data-ta="உங்கள் பயணம் தொடங்கும் இடம்">Your boarding point</small>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label"><strong data-en="To" data-ta="இலக்கு">To</strong></label>
+                        <select class="form-select" name="destination" id="destinationSelect" required>
+                            <option value="" data-en="Select destination" data-ta="இலக்கைத் தேர்ந்தெடுக்கவும்">Select destination</option>
+                            {% for p in places %}
+                            <option value="{{ p }}" {{ p == q.destination and 'selected' or '' }}>{{ p }}</option>
+                            {% endfor %}
+                        </select>
+                        <small class="text-muted" data-en="Where you want to go" data-ta="நீங்கள் செல்ல விரும்பும் இடம்">Where you want to go</small>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label"><strong data-en="Date" data-ta="தேதி">Date</strong></label>
+                        <input type="date" class="form-control" name="date" id="travelDate" value="{{ q.date or '' }}">
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="bi bi-search"></i> <span data-en="Search" data-ta="தேடுக">Search</span>
+                        </button>
+                    </div>
+                </div>
+            </form>
+
+            {% if q.origin and q.destination %}
+            <!-- Route Selection Alert -->
+            <div class="alert alert-success border-start border-4 border-success">
+                <h5 class="alert-heading">
+                    <i class="bi bi-geo-alt-fill"></i> 
+                    <span data-en="Route Selected" data-ta="வழி தேர்ந்தெடுக்கப்பட்டது">Route Selected</span>
+                </h5>
+                <p class="mb-2">
+                    <strong data-en="From:" data-ta="இருந்து:">From:</strong> <span class="badge bg-primary">{{ q.origin }}</span>
+                    <strong data-en="To:" data-ta="இலக்கு:" class="ms-3">To:</strong> <span class="badge bg-success">{{ q.destination }}</span>
+                    {% if q.date %}
+                    <strong data-en="Date:" data-ta="தேதி:" class="ms-3">Date:</strong> <span class="badge bg-info">{{ q.date }}</span>
+                    {% endif %}
+                </p>
+                <hr>
+                <p class="mb-0 small">
+                    <i class="bi bi-info-circle"></i> 
+                    <span data-en="Here are your travel options based on your route selection:" data-ta="உங்கள் வழி தேர்வின் அடிப்படையில் உங்கள் பயண விருப்பங்கள் இங்கே:">
+                        Here are your travel options based on your route selection:
+                    </span>
+                </p>
+            </div>
+            
+            <!-- Weather Information Cards -->
+            <div class="row g-3 mb-3">
+                {% if origin_weather %}
+                <div class="col-md-6">
+                    <div class="card border-primary">
+                        <div class="card-header bg-primary text-white">
+                            <i class="bi bi-cloud-sun"></i> <strong data-en="Weather at Origin: {{ q.origin }}" data-ta="தொடக்கத்தில் வானிலை: {{ q.origin }}">Weather at Origin: {{ q.origin }}</strong>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h3 class="mb-0">{{ origin_weather.temperature }}°C</h3>
+                                    <small class="text-muted" data-en="Feels like {{ origin_weather.feels_like }}°C" data-ta="{{ origin_weather.feels_like }}°C போல உணரப்படுகிறது">Feels like {{ origin_weather.feels_like }}°C</small>
+                                </div>
+                                <div class="text-end">
+                                    <div class="fs-5">{{ origin_weather.description }}</div>
+                                    <small class="text-muted">💧 {{ origin_weather.humidity }}% | 💨 {{ origin_weather.wind_speed }} km/h</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if dest_weather %}
+                <div class="col-md-6">
+                    <div class="card border-success">
+                        <div class="card-header bg-success text-white">
+                            <i class="bi bi-cloud-sun-fill"></i> <strong data-en="Weather at Destination: {{ q.destination }}" data-ta="இலக்கில் வானிலை: {{ q.destination }}">Weather at Destination: {{ q.destination }}</strong>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h3 class="mb-0">{{ dest_weather.temperature }}°C</h3>
+                                    <small class="text-muted" data-en="Feels like {{ dest_weather.feels_like }}°C" data-ta="{{ dest_weather.feels_like }}°C போல உணரப்படுகிறது">Feels like {{ dest_weather.feels_like }}°C</small>
+                                </div>
+                                <div class="text-end">
+                                    <div class="fs-5">{{ dest_weather.description }}</div>
+                                    <small class="text-muted">💧 {{ dest_weather.humidity }}% | 💨 {{ dest_weather.wind_speed }} km/h</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- Weather-Based Recommendations -->
+            {% if origin_recommendations or dest_recommendations %}
+            <div class="mb-3">
+                <h6 class="mb-2"><i class="bi bi-bell-fill text-warning"></i> <span data-en="Travel Recommendations" data-ta="பயண பரிந்துரைகள்">Travel Recommendations</span></h6>
+                {% for rec in origin_recommendations %}
+                <div class="alert alert-{{ rec.type }} alert-dismissible fade show" role="alert">
+                    <strong>{{ rec.icon }}</strong> {{ rec.message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                {% endfor %}
+                {% for rec in dest_recommendations %}
+                <div class="alert alert-{{ rec.type }} alert-dismissible fade show" role="alert">
+                    <strong>{{ rec.icon }}</strong> {{ rec.message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            
+            <!-- Nearby Railway Station Recommendations -->
+            <div class="row g-3 mb-3">
+                {% if origin_station_info %}
+                <div class="col-md-6">
+                    <div class="card border-info">
+                        <div class="card-header bg-info text-white">
+                            <i class="bi bi-train-front"></i> 
+                            <strong data-en="Nearest Railway Stations from {{ q.origin }}" data-ta="{{ q.origin }} இலிருந்து அருகிலுள்ள ரயில் நிலையங்கள்">Nearest Railway Stations from {{ q.origin }}</strong>
+                        </div>
+                        <div class="card-body">
+                            {% if origin_station_info.distance != 'Direct' %}
+                            <div class="alert alert-warning mb-2">
+                                <i class="bi bi-exclamation-triangle"></i>
+                                <span data-en="No direct railway station at {{ q.origin }}" data-ta="{{ q.origin }} இல் நேரடி ரயில் நிலையம் இல்லை">No direct railway station at {{ q.origin }}</span>
+                            </div>
+                            {% endif %}
+                            <h6 data-en="Recommended Station:" data-ta="பரிந்துரைக்கப்பட்ட நிலையம்:">Recommended Station:</h6>
+                            <div class="d-flex align-items-center mb-2">
+                                <span class="badge bg-primary fs-6 me-2">{{ origin_station_info.station }}</span>
+                                <small class="text-muted">({{ origin_station_info.distance }})</small>
+                            </div>
+                            <div class="mb-2">
+                                <small class="text-muted" data-en="Alternative options:" data-ta="மாற்று விருப்பங்கள்:">Alternative options:</small>
+                                <div class="mt-1">
+                                    {% for alt in origin_station_info.alternatives %}
+                                        <span class="badge bg-secondary me-1">{{ alt }}</span>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <small class="text-info">
+                                <i class="bi bi-info-circle"></i>
+                                <span data-en="Book your train tickets from these nearby stations" data-ta="இந்த அருகிலுள்ள நிலையங்களிலிருந்து உங்கள் ரயில் பதிக்களைப் பதிவு செய்யுங்கள்">Book your train tickets from these nearby stations</span>
+                            </small>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if dest_station_info %}
+                <div class="col-md-6">
+                    <div class="card border-info">
+                        <div class="card-header bg-info text-white">
+                            <i class="bi bi-train-front"></i> 
+                            <strong data-en="Nearest Railway Stations to {{ q.destination }}" data-ta="{{ q.destination }} க்கு அருகிலுள்ள ரயில் நிலையங்கள்">Nearest Railway Stations to {{ q.destination }}</strong>
+                        </div>
+                        <div class="card-body">
+                            {% if dest_station_info.distance != 'Direct' %}
+                            <div class="alert alert-warning mb-2">
+                                <i class="bi bi-exclamation-triangle"></i>
+                                <span data-en="No direct railway station at {{ q.destination }}" data-ta="{{ q.destination }} இல் நேரடி ரயில் நிலையம் இல்லை">No direct railway station at {{ q.destination }}</span>
+                            </div>
+                            {% endif %}
+                            <h6 data-en="Recommended Station:" data-ta="பரிந்துரைக்கப்பட்ட நிலையம்:">Recommended Station:</h6>
+                            <div class="d-flex align-items-center mb-2">
+                                <span class="badge bg-primary fs-6 me-2">{{ dest_station_info.station }}</span>
+                                <small class="text-muted">({{ dest_station_info.distance }})</small>
+                            </div>
+                            <div class="mb-2">
+                                <small class="text-muted" data-en="Alternative options:" data-ta="மாற்று விருப்பங்கள்:">Alternative options:</small>
+                                <div class="mt-1">
+                                    {% for alt in dest_station_info.alternatives %}
+                                        <span class="badge bg-secondary me-1">{{ alt }}</span>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <small class="text-info">
+                                <i class="bi bi-info-circle"></i>
+                                <span data-en="Get down at these nearby stations to reach {{ q.destination }}" data-ta="{{ q.destination }} க்கு செல்ல இந்த அருகிலுள்ள நிலையங்களில் இறங்குங்கள்">Get down at these nearby stations to reach {{ q.destination }}</span>
+                            </small>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            
+            <div class="row g-3">
+                <!-- Bus Options -->
+                <div class="col-lg-6">
+                    <div class="route-card">
+                        <div class="route-header">
+                            <h5 class="mb-0">
+                                <i class="bi bi-bus-front text-primary"></i>
+                                <span class="ms-2" data-en="Bus Services" data-ta="பேருந்து சேவைகள்">Bus Services</span>
+                            </h5>
+                        </div>
+                        
+                        {% if direct_services and direct_services|length %}
+                            <div class="mb-3">
+                                <span class="badge bg-success badge-pulse" data-en="{{ direct_services|length }} Direct Services Available" data-ta="{{ direct_services|length }} நேரடி சேவைகள் கிடைக்கின்றன">
+                                    {{ direct_services|length }} Direct Services Available
+                                </span>
+                                <a href="{{ url_for('passenger_timetables', origin=q.origin, destination=q.destination) }}" 
+                                   class="btn btn-sm btn-outline-primary ms-2" data-en="View Timetables" data-ta="நேர அட்டவணையைக் காண்க">
+                                    <i class="bi bi-clock-history"></i> View Timetables
+                                </a>
+                            </div>
+                            <div class="list-group list-group-flush">
+                                {% for s in direct_services[:3] %}
+                                <div class="list-group-item">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <div class="fw-bold">{{ s.service_number }} · {{ s.bus_number }}</div>
+                                            <small class="text-muted">{{ s.origin }} → {{ s.destination }}</small>
+                                        </div>
+                                        <div class="text-end">
+                                            <div class="badge bg-primary" data-en="Dep" data-ta="புற">Dep</div>
+                                            <div class="small">{{ s.departure_time.strftime('%I:%M %p') }}</div>
+                                            <div class="badge bg-success" data-en="Arr" data-ta="வரை">Arr</div>
+                                            <div class="small">{{ s.arrival_time.strftime('%I:%M %p') }}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            <div class="mt-3">
+                                <a target="_blank" href="{{ links.redbus }}" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-box-arrow-up-right"></i> <span data-en="Check Live Buses" data-ta="நேரடி பேருந்துகளை சரிபார்க்க">Check Live Buses</span>
+                                </a>
+                            </div>
+                        {% else %}
+                            <p class="text-muted" data-en="Checking for alternative routes..." data-ta="மாற்று வழிகளைச் சரிபார்க்கிறது...">Checking for alternative routes...</p>
+            <!-- Multi-Modal Coordination Recommendations -->
+            {% if coordination_recommendations and coordination_recommendations|length %}
+            <div class="row g-3 mb-4">
+                <div class="col-12">
+                    <div class="card border-success shadow-sm">
+                        <div class="card-header bg-success text-white">
+                            <h5 class="mb-0">
+                                <i class="bi bi-diagram-3"></i>
+                                <span class="ms-2" data-en="Multi-Modal Connection Recommendations" data-ta="பல முறை இணைப்பு பரிந்துரைகள்">Multi-Modal Connection Recommendations</span>
+                            </h5>
+                            <small data-en="Smart connections between bus, train, and flight services" data-ta="பேருந்து, ரயில் மற்றும் விமான சேவைகளுக்கு இடையேயான ஸ்மார்ட் இணைப்புகள்">Smart connections between bus, train, and flight services</small>
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-3">
+                                {% for rec in coordination_recommendations %}
+                                <div class="col-md-6">
+                                    <div class="card h-100 border-{{ 'primary' if rec.type == 'bus_train' else 'info' }}">
+                                        <div class="card-header bg-{{ 'primary' if rec.type == 'bus_train' else 'info' }} text-white">
+                                            <h6 class="mb-0">
+                                                <span class="fs-4">{{ rec.icon }}</span>
+                                                <span class="ms-2">{{ rec.title }}</span>
+                                            </h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <p class="text-muted mb-3">{{ rec.description }}</p>
+                                            
+                                            <div class="mb-2">
+                                                <strong data-en="Bus:" data-ta="பேருந்து:">Bus:</strong>
+                                                <div class="ms-3">
+                                                    <small>{{ rec.details.bus.service }} - {{ rec.details.bus.from }} → {{ rec.details.bus.to }}</small><br>
+                                                    <small class="text-muted">{{ rec.details.bus.departure }} - {{ rec.details.bus.arrival }}</small>
+                                                </div>
+                                            </div>
+                                            
+                                            {% if rec.details.train %}
+                                            <div class="mb-2">
+                                                <strong data-en="Train:" data-ta="ரயில்:">Train:</strong>
+                                                <div class="ms-3">
+                                                    <small>{{ rec.details.train.number }} - {{ rec.details.train.from }} → {{ rec.details.train.to }}</small><br>
+                                                    <small class="text-muted">{{ rec.details.train.departure }} - {{ rec.details.train.arrival }}</small>
+                                                </div>
+                                            </div>
+                                            {% endif %}
+                                            
+                                            {% if rec.details.flight %}
+                                            <div class="mb-2">
+                                                <strong data-en="Flight:" data-ta="விமானம்:">Flight:</strong>
+                                                <div class="ms-3">
+                                                    <small>{{ rec.details.flight.number }} - {{ rec.details.flight.from }} → {{ rec.details.flight.to }}</small><br>
+                                                    <small class="text-muted">{{ rec.details.flight.departure }} - {{ rec.details.flight.arrival }}</small>
+                                                </div>
+                                            </div>
+                                            {% endif %}
+                                            
+                                            <div class="alert alert-info mb-2 py-2">
+                                                <small>
+                                                    <i class="bi bi-clock"></i> <strong data-en="Connection Time:" data-ta="இணைப்பு நேரம்:">Connection Time:</strong> {{ rec.details.connection_time }}<br>
+                                                    <i class="bi bi-people"></i> <strong data-en="Expected Crowd:" data-ta="எதிர்பார்க்கப்படும் கூட்டம்:">Expected Crowd:</strong> 
+                                                    <span class="badge bg-{{ 'danger' if rec.details.crowd_level == 'high' else 'warning' if rec.details.crowd_level == 'moderate' else 'success' }}">
+                                                        {{ rec.details.crowd_prediction }} passengers ({{ rec.details.crowd_level }})
+                                                    </span>
+                                                </small>
+                                            </div>
+                                            
+                                            <p class="mb-0"><small class="text-success"><i class="bi bi-lightbulb"></i> {{ rec.recommendation }}</small></p>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+                            {% if connecting_suggestions and connecting_suggestions|length %}
+                            <div class="alert alert-warning" data-en="💡 Try connecting services via these hubs" data-ta="💡 இந்த மையங்கள் மூலம் இணைக்கும் சேவைகளை முயற்சிக்கவும்">
+                                💡 Try connecting services via these hubs
+                            </div>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Train Options -->
+                <div class="col-lg-6">
+                    <div class="route-card">
+                        <div class="route-header" style="border-color: #dc3545;">
+                            <h5 class="mb-0">
+                                <i class="bi bi-train-front text-danger"></i>
+                                <span class="ms-2" data-en="Train Services" data-ta="ரயில் சேவைகள்">Train Services</span>
+                            </h5>
+                        </div>
+                        
+                        <p class="text-muted small mb-3" data-en="Train options for your route" data-ta="உங்கள் வழிக்கான ரயில் விருப்பங்கள்">
+                            Train options for your route
+                        </p>
+                        
+                        <div class="d-flex gap-2 mb-3">
+                            <a target="_blank" href="{{ links.railyatri }}" class="btn btn-sm btn-primary">
+                                <i class="bi bi-train-front"></i> RailYatri
+                            </a>
+                            <a target="_blank" href="{{ links.irctc }}" class="btn btn-sm btn-outline-danger">
+                                IRCTC
+                            </a>
+                        </div>
+                        
+                        {% if origin_station_info %}
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i>
+                            <strong data-en="Railway Station:" data-ta="ரயில் நிலையம்:">Railway Station:</strong>
+                            <span class="badge bg-primary">{{ origin_station_info.station }}</span>
+                            {% if origin_station_info.distance != 'Direct' %}
+                            <span class="small text-muted">({{ origin_station_info.distance }})</span>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                        
+                        <div class="alert alert-light border">
+                            <small class="text-muted">
+                                <i class="bi bi-train-front"></i>
+                                <span data-en="Train bookings will use nearest station: <strong>{{ origin_station_info.station if origin_station_info else q.origin }}</strong> to <strong>{{ dest_station_info.station if dest_station_info else q.destination }}</strong>" 
+                                      data-ta="ரயில் பதிவுகள் அருகிலுள்ள நிலையத்தைப் பயன்படுத்தும்: <strong>{{ origin_station_info.station if origin_station_info else q.origin }}</strong> முதல் <strong>{{ dest_station_info.station if dest_station_info else q.destination }}</strong>">
+                                    Train bookings will use nearest station: <strong>{{ origin_station_info.station if origin_station_info else q.origin }}</strong> to <strong>{{ dest_station_info.station if dest_station_info else q.destination }}</strong>
+                                </span>
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Flight Option Card -->
+            <div class="col-lg-12 mt-3">
+                <div class="route-card">
+                    <div class="route-header" style="border-color: #0dcaf0;">
+                        <h5 class="mb-0">
+                            <i class="bi bi-airplane text-info"></i>
+                            <span class="ms-2" data-en="Flight Options" data-ta="விமான விருப்பங்கள்">Flight Options</span>
+                        </h5>
+                    </div>
+                    
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <p class="text-muted small mb-2" data-en="For faster travel from <strong>{{ q.origin }}</strong> to <strong>{{ q.destination }}</strong>" data-ta="<strong>{{ q.origin }}</strong> இலிருந்து <strong>{{ q.destination }}</strong> க்கு வேகமான பயணத்திற்கு">
+                                For faster travel from <strong>{{ q.origin }}</strong> to <strong>{{ q.destination }}</strong>
+                            </p>
+                            <div class="small">
+                                <i class="bi bi-airplane-fill text-info"></i>
+                                <span data-en="Nearest Airports:" data-ta="அருகிலுள்ள விமான நிலையங்கள்:">Nearest Airports:</span>
+                                <span class="badge bg-info">{{ origin_airport }}</span> 
+                                <span data-en="to" data-ta="முதல்">to</span> 
+                                <span class="badge bg-info">{{ dest_airport }}</span>
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <a target="_blank" href="{{ links.flights }}" class="btn btn-sm btn-info">
+                                <i class="bi bi-airplane-fill"></i> <span data-en="Check Flights" data-ta="விமானங்களை சரிபார்க்க">Check Flights</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <!-- No Route Selected State -->
+            <div class="text-center py-5">
+                <i class="bi bi-compass" style="font-size: 4rem; color: #667eea;"></i>
+                <h4 class="mt-3 mb-3" data-en="Select Your Route to Get Started" data-ta="தொடங்க உங்கள் வழியைத் தேர்ந்தெடுக்கவும்">Select Your Route to Get Started</h4>
+                <p class="text-muted mb-4" data-en="Choose your origin and destination above to see available travel options" data-ta="கிடைக்கும் பயண விருப்பங்களைப் பார்க்க மேலே உங்கள் தொடக்கப் புள்ளி மற்றும் இலக்கைத் தேர்ந்தெடுக்கவும்">
+                    Choose your origin and destination above to see available travel options
+                </p>
+                <div class="alert alert-info d-inline-block">
+                    <i class="bi bi-lightbulb"></i>
+                    <span data-en="💡 Tip: Select both 'From' and 'To' locations and click Search to get personalized travel plans" data-ta="💡 குறிப்பு: 'இருந்து' மற்றும் 'இலக்கு' இரண்டும் தேர்ந்தெடுத்து தேடலைக் கிளிக் செய்யவும் தனிப்பட்ட பயணத் திட்டங்களைப் பெற">
+                        💡 Tip: Select both 'From' and 'To' locations and click Search to get personalized travel plans
+                    </span>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<footer class="border-top py-3 mt-5" style="position: relative; z-index: 10;">
+    <div class="container text-center text-muted small">
+        Designed and developed by the Nextlinker under CSP Project | KARE
+    </div>
+</footer>
+
+<script>
+let currentLang = localStorage.getItem('preferredLang') || 'en';
+
+function changeLang(lang) {
+    currentLang = lang === 'en' ? 'en' : 'ta';
+    const elements = document.querySelectorAll('[data-en][data-ta]');
+    elements.forEach(el => {
+        el.innerHTML = el.getAttribute('data-' + currentLang);
+    });
+    document.getElementById('langText').textContent = currentLang === 'en' ? 'தமிழ்' : 'English';
+    localStorage.setItem('preferredLang', currentLang);
+}
+
+// Apply language on load
+document.addEventListener('DOMContentLoaded', () => {
+    changeLang(currentLang);
+});
+
+// Auto-fill destination from localStorage if available
+const selectedDest = localStorage.getItem('selectedDestination');
+if (selectedDest && !document.getElementById('destinationSelect').value) {
+    document.getElementById('destinationSelect').value = selectedDest;
+}
+
+// Set minimum date to today
+const today = new Date().toISOString().split('T')[0];
+const dateInput = document.getElementById('travelDate');
+if (dateInput && !dateInput.value) {
+    dateInput.setAttribute('min', today);
+}
+
+// Form validation - ensure both origin and destination are selected
+document.getElementById('routeForm').addEventListener('submit', function(e) {
+    const origin = document.getElementById('originSelect').value;
+    const destination = document.getElementById('destinationSelect').value;
+    
+    if (!origin || !destination) {
+        e.preventDefault();
+        alert('Please select both origin and destination to search for travel options.');
+        return false;
+    }
+    
+    if (origin === destination) {
+        e.preventDefault();
+        alert('Origin and destination cannot be the same. Please select different locations.');
+        return false;
+    }
+});
+</script>
+</body>
+</html>

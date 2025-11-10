@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Passenger Portal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        body { 
+            font-family: Verdana, Geneva, Tahoma, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background-attachment: fixed;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        * { font-family: Verdana, Geneva, Tahoma, sans-serif !important; }
+        footer { 
+            background: #f8f9fa;
+            margin-top: auto;
+        }
+        
+        /* Bus Animation Background */
+        .bus-animation {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 120px;
+            overflow: hidden;
+            z-index: 1;
+            pointer-events: none;
+        }
+        .road {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 200%;
+            height: 30px;
+            background: #333;
+            animation: moveRoad 4s linear infinite;
+        }
+        .lane {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: repeating-linear-gradient(
+                to right,
+                rgba(255,255,255,0.9) 0 40px,
+                transparent 40px 80px
+            );
+            transform: translateY(-50%);
+            opacity: 0.8;
+        }
+        
+        .bus {
+            position: absolute;
+            width: 80px;
+            height: 60px;
+            background: #FFD700;
+            border-radius: 10px;
+            transform-origin: 50% 100%;
+            animation: moveBus 15s linear infinite, busBounce 1.2s ease-in-out infinite;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+        .bus .body {
+            position: absolute;
+            inset: 0;
+            border-radius: 10px;
+            background: linear-gradient(to bottom, #FFD700 0%, #E6BE00 100%);
+        }
+        .bus .front-window {
+            position: absolute;
+            left: 8px;
+            top: 12px;
+            width: 24px;
+            height: 18px;
+            background: linear-gradient(to bottom, #9dd1ff, #5aa8e8);
+            border-radius: 3px;
+        }
+        .bus .side-windows {
+            position: absolute;
+            right: 8px;
+            top: 10px;
+            display: grid;
+            grid-auto-flow: column;
+            gap: 4px;
+        }
+        .bus .side-windows .win {
+            width: 12px;
+            height: 16px;
+            background: linear-gradient(to bottom, #9dd1ff, #5aa8e8);
+            border-radius: 2px;
+        }
+        .bus .wheel {
+            position: absolute;
+            bottom: -6px;
+            width: 18px;
+            height: 18px;
+            background: #222;
+            border: 3px solid #555;
+            border-radius: 50%;
+            box-shadow: inset 0 0 0 3px #111;
+            animation: spin 1s linear infinite;
+        }
+        .bus .wheel.left { left: 10px; }
+        .bus .wheel.right { right: 10px; }
+        .bus .hubcap {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: 6px;
+            height: 6px;
+            background: #bbb;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+        }
+        .bus .headlight {
+            position: absolute;
+            left: 2px;
+            bottom: 18px;
+            width: 6px;
+            height: 6px;
+            background: #fff6a9;
+            border-radius: 50%;
+            box-shadow: 0 0 8px 2px rgba(255,246,169,0.8);
+        }
+        .bus .smoke {
+            position: absolute;
+            right: -8px;
+            bottom: 14px;
+            width: 6px;
+            height: 6px;
+            background: rgba(200,200,200,0.6);
+            border-radius: 50%;
+            filter: blur(0.5px);
+            animation: smoke 1.4s ease-out infinite;
+        }
+        
+        @keyframes moveBus {
+            0% { left: -100px; }
+            100% { left: 100%; }
+        }
+        @keyframes moveRoad {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+        @keyframes busBounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-2px); }
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        @keyframes smoke {
+            0% { opacity: 0.8; transform: translateX(0) translateY(0) scale(1); }
+            100% { opacity: 0; transform: translateX(12px) translateY(-10px) scale(1.8); }
+        }
+        
+        /* Static bus on left side */
+        .static-bus {
+            position: fixed;
+            left: 40px;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 100;
+            pointer-events: none;
+        }
+        .static-bus .bus-container {
+            width: 120px;
+            height: 90px;
+            animation: staticBusBounce 2s ease-in-out infinite;
+        }
+        .static-bus .body {
+            width: 100%;
+            height: 70px;
+            background: linear-gradient(to bottom, #FFD700, #E6BE00);
+            border-radius: 15px;
+            position: relative;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+        }
+        .static-bus .front-window {
+            position: absolute;
+            left: 12px;
+            top: 18px;
+            width: 36px;
+            height: 26px;
+            background: linear-gradient(to bottom, #9dd1ff, #5aa8e8);
+            border-radius: 5px;
+        }
+        .static-bus .side-windows {
+            position: absolute;
+            right: 12px;
+            top: 15px;
+            display: grid;
+            grid-auto-flow: column;
+            gap: 6px;
+        }
+        .static-bus .win {
+            width: 18px;
+            height: 24px;
+            background: linear-gradient(to bottom, #9dd1ff, #5aa8e8);
+            border-radius: 3px;
+        }
+        .static-bus .wheel {
+            position: absolute;
+            bottom: -12px;
+            width: 27px;
+            height: 27px;
+            background: #222;
+            border: 4px solid #555;
+            border-radius: 50%;
+            box-shadow: inset 0 0 0 4px #111;
+        }
+        .static-bus .wheel.left { left: 15px; }
+        .static-bus .wheel.right { right: 15px; }
+        .static-bus .hubcap {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 10px;
+            height: 10px;
+            background: #bbb;
+            border-radius: 50%;
+        }
+        .static-bus .label {
+            position: absolute;
+            bottom: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.75rem;
+            color: #333;
+            font-weight: bold;
+            background: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        @keyframes staticBusBounce {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            25% { transform: translateY(-8px) rotate(-1deg); }
+            75% { transform: translateY(-4px) rotate(1deg); }
+        }
+        
+        /* Floating particles */
+        .particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: rgba(255,255,255,0.5);
+            border-radius: 50%;
+            animation: float 8s linear infinite;
+        }
+        
+        @keyframes float {
+            0% {
+                transform: translateY(100vh) rotate(0deg);
+                opacity: 0;
+            }
+            50% {
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(-100vh) rotate(360deg);
+                opacity: 0;
+            }
+        }
+        
+        .hero-section {
+            background: rgba(255,255,255,0.95);
+            border-radius: 15px;
+            padding: 2rem;
+            margin: 2rem 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            position: relative;
+            z-index: 10;
+        }
+        
+        .lang-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+        
+        broadcast.talking {
+            display: inline-block;
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        
+        .destination-card {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .destination-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+    </style>
+</head>
+<body>
+    <!-- Static Bus on Left -->
+    <div class="static-bus">
+        <div class="bus-container">
+            <div class="body">
+                <div class="front-window"></div>
+                <div class="side-windows">
+                    <div class="win"></div>
+                    <div class="win"></div>
+                </div>
+                <div class="wheel left"><div class="hubcap"></div></div>
+                <div class="wheel right"><div class="hubcap"></div></div>
+            </div>
+            <div class="label">🚌 Yatra</div>
+        </div>
+    </div>
+
+    <!-- Bus Animation -->
+    <div class="bus-animation">
+        <div class="road">
+            <div class="lane"></div>
+        </div>
+        <div class="particle" style="left: 10%; animation-delay: 0s;"></div>
+        <div class="particle" style="left: 30%; animation-delay: 2s;"></div>
+        <div class="particle" style="left: 50%; animation-delay: 4s;"></div>
+        <div class="particle" style="left: 70%; animation-delay: 6s;"></div>
+        <div class="particle" style="left: 90%; animation-delay: 8s;"></div>
+
+        <div class="bus" style="animation-delay: 0s; bottom: 28px;">
+            <div class="body"></div>
+            <div class="front-window"></div>
+            <div class="side-windows">
+                <div class="win"></div>
+                <div class="win"></div>
+                <div class="win"></div>
+            </div>
+            <div class="wheel left"><div class="hubcap"></div></div>
+            <div class="wheel right"><div class="hubcap"></div></div>
+            <div class="headlight"></div>
+            <div class="smoke"></div>
+        </div>
+
+        <div class="bus" style="animation-delay: 5s; bottom: 28px; background: none;">
+            <div class="body" style="background: linear-gradient(to bottom, #FF6B6B 0%, #DC143C 100%);"></div>
+            <div class="front-window"></div>
+            <div class="side-windows">
+                <div class="win"></div>
+                <div class="win"></div>
+                <div class="win"></div>
+            </div>
+            <div class="wheel left"><div class="hubcap"></div></div>
+            <div class="wheel right"><div class="hubcap"></div></div>
+            <div class="headlight"></div>
+            <div class="smoke"></div>
+        </div>
+
+        <div class="bus" style="animation-delay: 10s; bottom: 28px; background: none;">
+            <div class="body" style="background: linear-gradient(to bottom, #4ECDC4 0%, #2E8B8B 100%);"></div>
+            <div class="front-window"></div>
+            <div class="side-windows">
+                <div class="win"></div>
+                <div class="win"></div>
+                <div class="win"></div>
+            </div>
+            <div class="wheel left"><div class="hubcap"></div></div>
+            <div class="wheel right"><div class="hubcap"></div></div>
+            <div class="headlight"></div>
+            <div class="smoke"></div>
+        </div>
+    </div>
+    
+    <nav class="navbar navbar-expand-lg navbar-dark" style="background: rgba(0,0,0,0.5); backdrop-filter: blur(10px);">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <i class="bi bi-bus-front"></i> Yatra Saarthi
+            </a>
+            <div class="ms-auto">
+                <a class="btn btn-outline-light btn-sm" href="{{ url_for('login') }}">
+                    <i class="bi bi-person-circle"></i> Admin Login
+                </a>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- Language Toggle -->
+    <div class="lang-toggle">
+        <div class="btn-group" role="group">
+            <button type="button" class="btn btn-light btn-sm active" onclick="changeLang('en')">
+                <i class="bi bi-translate"></i> English
+            </button>
+            <button type="button" class="btn btn-light btn-sm" onclick="changeLang('ta')">
+                🇮🇳 தமிழ்
+            </button>
+            <button type="button" class="btn btn-light btn-sm" onclick="changeLang('te')">
+                🇮🇳 తెలుగు
+            </button>
+        </div>
+    </div>
+
+    <div class="container py-4">
+        <!-- Hero Section with Real-time Suggestions -->
+        <div class="hero-section">
+            <div class="text-center mb-4">
+                <h1 class="display-5 mb-2" data-en="Plan Your Journey" data-ta="உங்கள் பயணத்தைத் திட்டமிடுங்கள்" data-te="మీ ప్రయాణాన్ని ఆప్లాన్ చేయండి">
+                    Plan Your Journey
+                </h1>
+                <p class="lead text-muted" data-en="We help you plan your travel! Choose your boarding point and destination to see available buses, timings, and how to reach your destination." 
+                   data-ta="நாங்கள் உங்கள் பயணத்தைத் திட்டமிட உதவுகிறோம்! உங்கள் பயணத் தொடக்கப் புள்ளியையும் இலக்கையும் தேர்ந்தெடுத்து கிடைக்கும் பேருந்துகள், நேரங்கள் மற்றும் இலக்கை அடைவதற்கான வழிகளைப் பாருங்கள்."
+                   data-te="మేము మీ ప్రయాణాన్ని ప్లాన్ చేయడంలో మీకు సహాయం చేస్తాము! మీ బోర్డింగ్ పాయింట్ మరియు గమ్యస్థానాన్ని ఎంచుకుని అందుబాటులో ఉన్న బస్సులు, సమయాలు మరియు మీ గమ్యానికి చేరుకోవడానికి ఎలా చూడండి.">
+                    We help you plan your travel! Choose your boarding point and destination to see available buses, timings, and how to reach your destination.
+                </p>
+            </div>
+            
+            <!-- Popular Destinations -->
+            <div class="row g-3 mb-4">
+                <h6 class="text-muted" data-en="Popular Destinations" data-ta="பிரபலமான இலக்குகள்" data-te="ప్రసిద్ధ గమ్యస్థానాలు">Popular Destinations</h6>
+                <div class="col-md-3 col-sm-6">
+                    <div class="card destination-card border-primary" onclick="setDestination('Bengaluru')">
+                        <div class="card-body text-center">
+                            <div class="badge bg-primary mb-2">📍 Famous: Vidhana Soudha</div>
+                            <i class="bi bi-building text-primary" style="font-size: 2rem;"></i>
+                            <h6 class="mt-2 mb-1">Bengaluru</h6>
+                            <small class="text-muted d-block" data-en="Tech Hub · Night Life" data-ta="டெக் மையம் · இரவு வாழ்க்கை" data-te="టెక్ హబ్ · నైట్ లైఫ్">Tech Hub · Night Life</small>
+                            <small class="text-primary mt-1 d-block" data-en="Buses: 8:00 PM · 9:00 PM" data-ta="பேருந்துகள்: மாலை 8:00 · 9:00" data-te="బస్సులు: సాయంత్రం 8:00 · 9:00">Buses: 8:00 PM · 9:00 PM</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    <div class="card destination-card border-success" onclick="setDestination('Chennai')">
+                        <div class="card-body text-center">
+                            <div class="badge bg-success mb-2">📍 Famous: Marina Beach</div>
+                            <i class="bi bi-building text-success" style="font-size: 2rem;"></i>
+                            <h6 class="mt-2 mb-1">Chennai</h6>
+                            <small class="text-muted d-block" data-en="Capital City · Beaches" data-ta="தலைநகரம் · கடற்கரைகள்" data-te="రాజధాని · బీచ్">Capital City · Beaches</small>
+                            <small class="text-success mt-1 d-block" data-en="Buses: 10:00 PM · 11:00 PM" data-ta="பேருந்துகள்: இரவு 10:00 · 11:00" data-te="బస్సులు: రాత్రి 10:00 · 11:00">Buses: 10:00 PM · 11:00 PM</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    <div class="card destination-card border-info" onclick="setDestination('Madurai')">
+                        <div class="card-body text-center">
+                            <div class="badge bg-info mb-2">📍 Famous: Meenakshi Temple</div>
+                            <i class="bi bi-building text-info" style="font-size: 2rem;"></i>
+                            <h6 class="mt-2 mb-1">Madurai</h6>
+                            <small class="text-muted d-block" data-en="Temple City · Heritage" data-ta="கோவில் நகரம் · பாரம்பரியம்" data-te="ఆలయ నగరం · సంప్రదాయం">Temple City · Heritage</small>
+                            <small class="text-info mt-1 d-block" data-en="Buses: Every 1 hour" data-ta="பேருந்துகள்: ஒவ்வொரு மணி நேரத்திற்கும்" data-te="బస్సులు: ప్రతి 1 గంటకు">Buses: Every 1 hour</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    <div class="card destination-card border-warning" onclick="setDestination('Coimbatore')">
+                        <div class="card-body text-center">
+                            <div class="badge bg-warning mb-2">📍 Famous: Textile City</div>
+                            <i class="bi bi-building text-warning" style="font-size: 2rem;"></i>
+                            <h6 class="mt-2 mb-1">Coimbatore</h6>
+                            <small class="text-muted d-block" data-en="Textile Hub · Industry" data-ta="நெசவு மையம் · தொழில்" data-te="టెక్స్టైల్ హబ్ · పరిశ్రమ">Textile Hub · Industry</small>
+                            <small class="text-warning mt-1 d-block" data-en="Buses: 9:00 PM · 10:30 PM" data-ta="பேருந்துகள்: இரவு 9:00 · 10:30" data-te="బస్సులు: రాత్రి 9:00 · 10:30">Buses: 9:00 PM · 10:30 PM</small>
+                        </div>
+                    </div>
+            </div>
+        </div>
+            
+            <div class="text-center mb-4">
+                <a href="{{ url_for('passengers_plan') }}" class="btn btn-primary btn-lg">
+                    <i class="bi bi-compass"></i> <span data-en="Plan your travel" data-ta="உங்கள் பயணத்தைத் திட்டமிடுங்கள்" data-te="మీ ప్రయాణాన్ని ప్లాన్ చేయండి">Plan your travel</span>
+            </a>
+        </div>
+
+            <!-- Help Section -->
+            <div class="alert alert-info">
+                <h6 class="alert-heading"><i class="bi bi-info-circle"></i> <span data-en="How to Plan Your Journey:" data-ta="உங்கள் பயணத்தைத் திட்டமிடுவது எப்படி:" data-te="మీ ప్రయాణాన్ని ఎలా ప్లాన్ చేయాలి:">How to Plan Your Journey:</span></h6>
+                <ul class="mb-0">
+                    <li data-en="Select your boarding point (where you are now)" data-ta="உங்கள் பயணத் தொடக்கப் புள்ளியைத் தேர்ந்தெடுக்கவும் (நீங்கள் இப்போது இருக்கும் இடம்)" data-te="మీ బోర్డింగ్ పాయింట్ని ఎంచుకోండి (మీరు ఇప్పుడు ఎక్కడ ఉన్నారు)">Select your boarding point (where you are now)</li>
+                    <li data-en="Choose your destination (where you want to go)" data-ta="உங்கள் இலக்கைத் தேர்ந்தெடுக்கவும் (நீங்கள் செல்ல விரும்பும் இடம்)" data-te="మీ గమ్యస్థానాన్ని ఎంచుకోండి (మీరు వెళ్లదలచిన ప్రదేశం)">Choose your destination (where you want to go)</li>
+                    <li data-en="See available bus schedules with departure and arrival times" data-ta="புறப்பாடு மற்றும் வருகை நேரங்களுடன் கிடைக்கும் பேருந்து அட்டவணைகளைப் பார்க்கவும்" data-te="తిరుగుతున్న మరియు రాక సమయాలతో అందుబాటులో ఉన్న బస్సు షెడ్యూళ్లను చూడండి">See available bus schedules with departure and arrival times</li>
+                    <li data-en="Get instant information about what each destination is famous for" data-ta="ஒவ்வொரு இலக்கும் எதற்கு பிரபலமானது என்பதைப் பற்றிய உடனடி தகவலைப் பெறுங்கள்" data-te="ప్రతి గమ్యం దేనికి ప్రసిద్ధి చెందిందో ఉన్నత సమాచారాన్ని పొందండి">Get instant information about what each destination is famous for</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Available Bus Services -->
+        <div class="row mb-3">
+            <div class="col-12">
+                <div class="card shadow" style="background: rgba(255,255,255,0.95);">
+                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="bi bi-bus-front"></i> <span data-en="Available Bus Services" data-ta="கிடைக்கும் பேருந்து சேவைகள்" data-te="అందుబాటులో ఉన్న బస్ సేవలు">Available Bus Services</span>
+                            <span class="badge bg-secondary ms-2">Public</span>
+                        </h5>
+                        {% if active_services %}
+                        <span class="badge bg-light text-primary">
+                            <i class="bi bi-list-check"></i> {{ active_services|length }} <span data-en="Services" data-ta="சேவைகள்" data-te="సేవలు">Services</span>
+                        </span>
+                        {% endif %}
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-light border mb-3">
+                            <h6 class="alert-heading"><i class="bi bi-info-circle text-primary"></i> <span data-en="Service Details:" data-ta="சேவை விவரங்கள்:" data-te="సేవ వివరాలు:">Service Details:</span></h6>
+                            <ul class="mb-0 small">
+                                <li><strong data-en="Major Stops" data-ta="முக்கிய நிறுத்தங்கள்" data-te="ముఖ్యమైన ఆగుపనిచేస్తుంది">Major Stops:</strong> <span data-en="All bus stop locations along the route" data-ta="வழியில் அனைத்து பேருந்து நிறுத்த இடங்கள்" data-te="మార్గం వెంట అన్ని బస్ స్టాప్ స్థానాలు">All bus stop locations along the route</span></li>
+                                <li><strong data-en="Via Routes" data-ta="வழியாக" data-te="ద్వారా">Via Routes:</strong> <span data-en="Intermediary destinations the bus passes through" data-ta="பேருந்து கடந்து செல்லும் இடைநிலை இலக்குகள்" data-te="బస్ గుండా వెళ్లే మధ్యంతర గమ్యస్థానాలు">Intermediary destinations the bus passes through</span></li>
+                                <li><strong data-en="Timing" data-ta="நேரம்" data-te="సమయం">Timing:</strong> <span data-en="Departure and arrival times" data-ta="புறப்பாடு மற்றும் வருகை நேரங்கள்" data-te="విడిచిపెట్టడం మరియు రాక సమయాలు">Departure and arrival times</span></li>
+                            </ul>
+                        </div>
+        {% if active_services %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                        <th data-en="Service #" data-ta="சேவை #" data-te="సేవ #">Service #</th>
+                                        <th data-en="Bus #" data-ta="பேருந்து #" data-te="బస్ #">Bus #</th>
+                                        <th data-en="Route" data-ta="வழி" data-te="మార్గం">Route</th>
+                                        <th data-en="Timing" data-ta="நேரம்" data-te="సమయం">Timing</th>
+                                        <th data-en="Major Stops" data-ta="முக்கிய நிறுத்தங்கள்" data-te="ముఖ్యమైన ఆగుపనిచేస్తుంది">Major Stops</th>
+                                        <th data-en="Via Routes" data-ta="வழியாக" data-te="ద్వారా">Via Routes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for s in active_services %}
+                            <tr>
+                                <td class="fw-semibold">{{ s.service_number }}</td>
+                                <td>{{ s.bus_number }}</td>
+                                <td>
+                                            <i class="bi bi-arrow-right text-primary"></i> {{ s.origin }} → {{ s.destination }}
+                                </td>
+                                <td class="text-nowrap">
+                                    {% if s.origin_departure_time %}
+                                                <span class="badge bg-success">{{ s.origin_departure_time.strftime('%I:%M %p') }}</span> → 
+                                    {% else %}—{% endif %}
+                                    {% if s.destination_arrival_time %}
+                                                <span class="badge bg-info">{{ s.destination_arrival_time.strftime('%I:%M %p') }}</span>
+                                    {% else %}—{% endif %}
+                                </td>
+                                <td class="small">
+                                    {% if s.stops %}
+                                        {% for stop in s.stops[:3] %}
+                                            {% if stop.name %}{{ stop.name }}{% elif stop.location %}{{ stop.location }}{% else %}{{ stop }}{% endif %}{% if not loop.last %}, {% endif %}
+                                        {% endfor %}
+                                        {% if s.stops|length > 3 %} <span class="text-muted">+{{ s.stops|length - 3 }} more</span>{% endif %}
+                                    {% else %}
+                                        <span class="text-muted" data-en="No stops" data-ta="நிறுத்தங்கள் இல்லை" data-te="ఆగుపనిచేస్తుంది లేవు">No stops</span>
+                                    {% endif %}
+                                </td>
+                                <td class="small text-muted">
+                                    {% if s.via_routes %}
+                                        {% for v in s.via_routes %}
+                                            {% if v is mapping %}
+                                                {{ v.name or v.location or v }}
+                                            {% else %}
+                                                {{ v }}
+                                            {% endif %}
+                                            {% if not loop.last %}, {% endif %}
+                                        {% endfor %}
+                                    {% else %}
+                                        <span data-en="Direct" data-ta="நேரடி" data-te="నేరుగా">Direct</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5 text-muted">
+            <i class="bi bi-bus-front" style="font-size: 3rem;"></i>
+                            <p class="mt-3 mb-0" data-en="No active services available at the moment." data-ta="இந்த நேரத்தில் சேவைகள் கிடைக்கவில்லை" data-te="ప్రస్తుతం క్రియాశీల సేవలు అందుబాటులో లేవు">No active services available at the moment.</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="border-top py-3 mt-5" style="position: relative; z-index: 10; margin-top: auto !important;">
+        <div class="container text-center text-muted small">
+            Designed and developed by the Nextlinker under CSP Project | KARE
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let currentLang = 'en';
+        
+        function changeLang(lang) {
+            currentLang = lang;
+            document.querySelectorAll('[data-en], [data-ta], [data-te]').forEach(el => {
+                const attr = 'data-' + lang;
+                if (el.hasAttribute(attr)) {
+                    el.textContent = el.getAttribute(attr);
+                }
+            });
+            
+            // Update button states
+            document.querySelectorAll('.lang-toggle button').forEach(btn => {
+                btn.classList.remove('active');
+                if ((lang === 'en' && btn.textContent.includes('English')) ||
+                    (lang === 'ta' && btn.textContent.includes('தமிழ்')) ||
+                    (lang === 'te' && btn.textContent.includes('తెలుగు'))) {
+                    btn.classList.add('active');
+                }
+            });
+            
+            localStorage.setItem('preferredLang', lang);
+        }
+        
+        function setDestination(dest) {
+            // Store destination in localStorage
+            localStorage.setItem('selectedDestination', dest);
+            // Redirect to plan page
+            window.location.href = '{{ url_for("passengers_plan") }}';
+        }
+        
+        // Load saved language preference
+        const savedLang = localStorage.getItem('preferredLang') || 'en';
+        if (savedLang !== 'en') {
+            changeLang(savedLang);
+        }
+    </script>
+</body>
+</html>

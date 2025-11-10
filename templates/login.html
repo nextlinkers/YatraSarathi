@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Bus Optimization System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        body {
+            font-family: Verdana, Geneva, Tahoma, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background-attachment: fixed;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+        }
+        * {
+            font-family: Verdana, Geneva, Tahoma, sans-serif !important;
+        }
+        
+        /* Bus Animation Background */
+        .bus-animation {
+            position: fixed;
+            bottom: 45px;
+            left: 0;
+            width: 100%;
+            height: 45px;
+            overflow: visible;
+            z-index: 1;
+            pointer-events: none;
+        }
+        .road {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 200%;
+            height: 20px;
+            background: #333;
+            animation: moveRoad 4s linear infinite;
+        }
+        .lane {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: repeating-linear-gradient(
+                to right,
+                rgba(255,255,255,0.9) 0 40px,
+                transparent 40px 80px
+            );
+            transform: translateY(-50%);
+            opacity: 0.8;
+        }
+        .bus {
+            position: absolute;
+            width: 80px;
+            height: 60px;
+            background: #FFD700;
+            border-radius: 10px;
+            transform-origin: 50% 100%;
+            animation: moveBus 15s linear infinite, busBounce 1.2s ease-in-out infinite;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+        .bus .body {
+            position: absolute;
+            inset: 0;
+            border-radius: 10px;
+            background: linear-gradient(to bottom, #FFD700 0%, #E6BE00 100%);
+        }
+        .bus .front-window {
+            position: absolute;
+            left: 8px;
+            top: 12px;
+            width: 24px;
+            height: 18px;
+            background: linear-gradient(to bottom, #9dd1ff, #5aa8e8);
+            border-radius: 3px;
+        }
+        .bus .side-windows {
+            position: absolute;
+            right: 8px;
+            top: 10px;
+            display: grid;
+            grid-auto-flow: column;
+            gap: 4px;
+        }
+        .bus .side-windows .win {
+            width: 12px;
+            height: 16px;
+            background: linear-gradient(to bottom, #9dd1ff, #5aa8e8);
+            border-radius: 2px;
+        }
+        .bus .wheel {
+            position: absolute;
+            bottom: -6px;
+            width: 18px;
+            height: 18px;
+            background: #222;
+            border: 3px solid #555;
+            border-radius: 50%;
+            box-shadow: inset 0 0 0 3px #111;
+            animation: spin 1s linear infinite;
+        }
+        .bus .wheel.left { left: 10px; }
+        .bus .wheel.right { right: 10px; }
+        .bus .hubcap {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: 6px;
+            height: 6px;
+            background: #bbb;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+        }
+        .bus .headlight {
+            position: absolute;
+            left: 2px;
+            bottom: 18px;
+            width: 6px;
+            height: 6px;
+            background: #fff6a9;
+            border-radius: 50%;
+            box-shadow: 0 0 8px 2px rgba(255,246,169,0.8);
+        }
+        .bus .smoke {
+            position: absolute;
+            right: -8px;
+            bottom: 14px;
+            width: 6px;
+            height: 6px;
+            background: rgba(200,200,200,0.6);
+            border-radius: 50%;
+            filter: blur(0.5px);
+            animation: smoke 1.4s ease-out infinite;
+        }
+
+        @keyframes moveBus {
+            0% { left: -100px; }
+            100% { left: 100%; }
+        }
+        @keyframes moveRoad {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+        @keyframes busBounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-2px); }
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        @keyframes smoke {
+            0% { opacity: 0.8; transform: translateX(0) translateY(0) scale(1); }
+            100% { opacity: 0; transform: translateX(12px) translateY(-10px) scale(1.8); }
+        }
+        
+        /* Kalasalingam University Buildings */
+        .university-buildings {
+            position: fixed;
+            bottom: 30px;
+            left: 0;
+            width: 100%;
+            height: 200px;
+            z-index: 1;
+            pointer-events: none;
+        }
+        
+        .building {
+            position: absolute;
+            background: linear-gradient(to top, rgba(106, 126, 234, 0.4) 0%, rgba(118, 75, 162, 0.5) 100%);
+            border-radius: 8px 8px 0 0;
+            animation: buildingFade 20s ease-in-out infinite;
+        }
+        
+        .building::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 20%;
+            background: linear-gradient(to bottom, rgba(255, 255, 255, 0.3), transparent);
+            border-radius: 8px 8px 0 0;
+        }
+        
+        .building-1 {
+            width: 100px;
+            height: 150px;
+            left: 5%;
+            bottom: 0;
+        }
+        
+        .building-2 {
+            width: 120px;
+            height: 180px;
+            left: 18%;
+            bottom: 0;
+            animation-delay: 2s;
+        }
+        
+        .building-3 {
+            width: 90px;
+            height: 140px;
+            left: 32%;
+            bottom: 0;
+            animation-delay: 4s;
+        }
+        
+        .building-4 {
+            width: 140px;
+            height: 200px;
+            left: 45%;
+            bottom: 0;
+            animation-delay: 6s;
+        }
+        
+        .building-5 {
+            width: 110px;
+            height: 160px;
+            left: 60%;
+            bottom: 0;
+            animation-delay: 8s;
+        }
+        
+        .building-6 {
+            width: 130px;
+            height: 190px;
+            left: 75%;
+            bottom: 0;
+            animation-delay: 10s;
+        }
+        
+        .building-7 {
+            width: 95px;
+            height: 145px;
+            left: 88%;
+            bottom: 0;
+            animation-delay: 12s;
+        }
+        
+        .building-window {
+            position: absolute;
+            background: rgba(255, 246, 169, 0.7);
+            border-radius: 2px;
+            animation: windowTwinkle 3s ease-in-out infinite;
+        }
+        
+        .building-1 .building-window { left: 20%; top: 25%; width: 18%; height: 15%; }
+        .building-1 .building-window:nth-child(2) { left: 50%; top: 25%; }
+        .building-1 .building-window:nth-child(3) { left: 20%; top: 50%; }
+        .building-1 .building-window:nth-child(4) { left: 50%; top: 50%; }
+        
+        .building-2 .building-window { left: 15%; top: 20%; width: 20%; height: 18%; }
+        .building-2 .building-window:nth-child(2) { left: 55%; top: 20%; }
+        .building-2 .building-window:nth-child(3) { left: 15%; top: 45%; }
+        .building-2 .building-window:nth-child(4) { left: 55%; top: 45%; }
+        
+        .building-3 .building-window { left: 25%; top: 30%; width: 20%; height: 15%; }
+        .building-3 .building-window:nth-child(2) { left: 25%; top: 55%; }
+        
+        .building-4 .building-window { left: 15%; top: 15%; width: 18%; height: 16%; }
+        .building-4 .building-window:nth-child(2) { left: 40%; top: 15%; }
+        .building-4 .building-window:nth-child(3) { left: 65%; top: 15%; }
+        .building-4 .building-window:nth-child(4) { left: 15%; top: 40%; }
+        .building-4 .building-window:nth-child(5) { left: 40%; top: 40%; }
+        .building-4 .building-window:nth-child(6) { left: 65%; top: 40%; }
+        
+        .building-5 .building-window { left: 20%; top: 25%; width: 22%; height: 18%; }
+        .building-5 .building-window:nth-child(2) { left: 60%; top: 25%; }
+        .building-5 .building-window:nth-child(3) { left: 20%; top: 52%; }
+        .building-5 .building-window:nth-child(4) { left: 60%; top: 52%; }
+        
+        .building-6 .building-window { left: 15%; top: 18%; width: 19%; height: 17%; }
+        .building-6 .building-window:nth-child(2) { left: 50%; top: 18%; }
+        .building-6 .building-window:nth-child(3) { left: 15%; top: 43%; }
+        .building-6 .building-window:nth-child(4) { left: 50%; top: 43%; }
+        .building-6 .building-window:nth-child(5) { left: 15%; top: 68%; }
+        
+        .building-7 .building-window { left: 22%; top: 28%; width: 21%; height: 16%; }
+        .building-7 .building-window:nth-child(2) { left: 22%; top: 54%; }
+        
+        @keyframes buildingFade {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 0.6; }
+        }
+        
+        @keyframes windowTwinkle {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+        
+        /* KARE University Dome */
+        .university-dome {
+            position: fixed;
+            top: 8%;
+            right: 10%;
+            width: 100px;
+            height: 70px;
+            background: linear-gradient(to bottom, rgba(255, 215, 0, 0.6), rgba(255, 165, 0, 0.4));
+            border-radius: 50% 50% 0 0;
+            z-index: 2;
+            animation: domeShine 4s ease-in-out infinite;
+            box-shadow: 0 5px 20px rgba(255, 215, 0, 0.3);
+        }
+        
+        .university-dome::after {
+            content: '';
+            position: absolute;
+            top: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 20px;
+            height: 20px;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.8) 0%, transparent 70%);
+            border-radius: 50%;
+        }
+        
+        .university-dome::before {
+            content: '🏛️';
+            position: absolute;
+            top: 30%;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 40px;
+            opacity: 0.7;
+        }
+        
+        @keyframes domeShine {
+            0%, 100% { opacity: 0.5; transform: scale(1) translateY(0); }
+            50% { opacity: 0.9; transform: scale(1.05) translateY(-5px); }
+        }
+        
+        /* KARE Logo/Emblem */
+        .kare-logo {
+            position: fixed;
+            top: 5%;
+            left: 5%;
+            z-index: 2;
+            text-align: center;
+        }
+        
+        .kare-logo .logo-text {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: rgba(255, 255, 255, 0.9);
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            animation: logoGlow 3s ease-in-out infinite;
+        }
+        
+        @keyframes logoGlow {
+            0%, 100% { text-shadow: 2px 2px 4px rgba(0,0,0,0.3), 0 0 10px rgba(255,255,255,0.3); }
+            50% { text-shadow: 2px 2px 4px rgba(0,0,0,0.3), 0 0 20px rgba(255,255,255,0.6); }
+        }
+        
+        .login-container {
+            max-width: 400px;
+            margin: 0 auto;
+            padding: 30px;
+            background: rgba(255,255,255,0.98);
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            position: relative;
+            z-index: 10;
+        }
+        .login-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .login-header i {
+            font-size: 3rem;
+            color: #0d6efd;
+            margin-bottom: 15px;
+            animation: busIconBounce 2s ease-in-out infinite;
+        }
+        
+        @keyframes busIconBounce {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            25% { transform: translateY(-8px) rotate(-5deg); }
+            75% { transform: translateY(-4px) rotate(5deg); }
+        }
+        
+        .form-floating {
+            margin-bottom: 1rem;
+        }
+        .btn-login {
+            width: 100%;
+            padding: 0.8rem;
+            font-size: 1.1rem;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+        .btn-login:hover {
+            transform: scale(1.02);
+            box-shadow: 0 5px 15px rgba(13, 110, 253, 0.4);
+        }
+        
+        /* Floating particles */
+        .particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: rgba(255,255,255,0.5);
+            border-radius: 50%;
+            animation: float 8s linear infinite;
+        }
+        
+        @keyframes float {
+            0% {
+                transform: translateY(100vh) rotate(0deg);
+                opacity: 0;
+            }
+            50% {
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(-100vh) rotate(360deg);
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- KARE Logo -->
+    <div class="kare-logo">
+        <div class="logo-text">🏛️ KARE</div>
+    </div>
+    
+    <!-- University Dome -->
+    <div class="university-dome"></div>
+    
+    <!-- University Buildings -->
+    <div class="university-buildings">
+        <div class="building building-1">
+            <div class="building-window"></div>
+            <div class="building-window"></div>
+            <div class="building-window"></div>
+            <div class="building-window"></div>
+        </div>
+        <div class="building building-2">
+            <div class="building-window"></div>
+            <div class="building-window"></div>
+            <div class="building-window"></div>
+            <div class="building-window"></div>
+        </div>
+        <div class="building building-3">
+            <div class="building-window"></div>
+            <div class="building-window"></div>
+        </div>
+        <div class="building building-4">
+            <div class="building-window"></div>
+            <div class="building-window"></div>
+            <div class="building-window"></div>
+            <div class="building-window"></div>
+            <div class="building-window"></div>
+            <div class="building-window"></div>
+        </div>
+        <div class="building building-5">
+            <div class="building-window"></div>
+            <div class="building-window"></div>
+            <div class="building-window"></div>
+            <div class="building-window"></div>
+        </div>
+        <div class="building building-6">
+            <div class="building-window"></div>
+            <div class="building-window"></div>
+            <div class="building-window"></div>
+            <div class="building-window"></div>
+            <div class="building-window"></div>
+        </div>
+        <div class="building building-7">
+            <div class="building-window"></div>
+            <div class="building-window"></div>
+        </div>
+    </div>
+
+    <!-- Bus Animation -->
+    <div class="bus-animation">
+        <div class="road">
+            <div class="lane"></div>
+        </div>
+        <div class="particle" style="left: 10%; animation-delay: 0s;"></div>
+        <div class="particle" style="left: 30%; animation-delay: 2s;"></div>
+        <div class="particle" style="left: 50%; animation-delay: 4s;"></div>
+        <div class="particle" style="left: 70%; animation-delay: 6s;"></div>
+        <div class="particle" style="left: 90%; animation-delay: 8s;"></div>
+
+        <div class="bus" style="animation-delay: 0s; bottom: 20px;">
+            <div class="body"></div>
+            <div class="front-window"></div>
+            <div class="side-windows">
+                <div class="win"></div>
+                <div class="win"></div>
+                <div class="win"></div>
+            </div>
+            <div class="wheel left"><div class="hubcap"></div></div>
+            <div class="wheel right"><div class="hubcap"></div></div>
+            <div class="headlight"></div>
+            <div class="smoke"></div>
+        </div>
+
+        <div class="bus" style="animation-delay: 5s; bottom: 20px; background: none;">
+            <div class="body" style="background: linear-gradient(to bottom, #FF6B6B 0%, #DC143C 100%);"></div>
+            <div class="front-window"></div>
+            <div class="side-windows">
+                <div class="win"></div>
+                <div class="win"></div>
+                <div class="win"></div>
+            </div>
+            <div class="wheel left"><div class="hubcap"></div></div>
+            <div class="wheel right"><div class="hubcap"></div></div>
+            <div class="headlight"></div>
+            <div class="smoke"></div>
+        </div>
+
+        <div class="bus" style="animation-delay: 10s; bottom: 20px; background: none;">
+            <div class="body" style="background: linear-gradient(to bottom, #4ECDC4 0%, #2E8B8B 100%);"></div>
+            <div class="front-window"></div>
+            <div class="side-windows">
+                <div class="win"></div>
+                <div class="win"></div>
+                <div class="win"></div>
+            </div>
+            <div class="wheel left"><div class="hubcap"></div></div>
+            <div class="wheel right"><div class="hubcap"></div></div>
+            <div class="headlight"></div>
+            <div class="smoke"></div>
+        </div>
+    </div>
+    
+    <div class="container" style="position: relative; z-index: 100;">
+        <div class="login-container">
+            <div class="login-header">
+                <i class="bi bi-bus-front"></i>
+                <h2>Yatra Saarthi</h2>
+                <p class="text-muted">Admin Panel</p>
+            </div>
+            
+            <form method="POST" action="{{ url_for('login') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="form-floating mb-3">
+                    <input type="text" class="form-control" id="username" name="username" placeholder="Username" required>
+                    <label for="username">Username</label>
+                </div>
+                <div class="form-floating mb-4">
+                    <input type="password" class="form-control" id="password" name="password" placeholder="Password" required>
+                    <label for="password">Password</label>
+                </div>
+                
+                <button type="submit" class="btn btn-primary btn-login">
+                    <i class="bi bi-box-arrow-in-right"></i> Sign In
+                </button>
+                
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ category }} alert-dismissible fade show mt-3" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+            </form>
+            
+            <div class="text-center mt-4">
+                <small class="text-muted">For Support Contact : 99230041300@klu.ac.in</small>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Footer -->
+    <footer style="position: fixed; bottom: 0; left: 0; width: 100%; background: rgba(255,255,255,0.95); padding: 8px 0; text-align: center; z-index: 1000; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); border-top: 2px solid rgba(106, 126, 234, 0.3);">
+        <div class="container">
+            <small class="text-muted" style="font-size: 0.75rem;">
+                Designed & Developed by Nextlinkers under Community Service Project at 
+                <strong style="color: #667eea;">KARE - Kalasalingam Academy of Research & Education</strong>
+            </small>
+        </div>
+    </footer>
+</body>
+</html>
