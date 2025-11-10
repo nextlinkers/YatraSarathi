@@ -13,16 +13,29 @@ if parent_dir not in sys.path:
     sys.path.insert(0, parent_dir)
 
 # Import the Flask app
-from app import app, db
+from app import app, db, create_admin_user
 
-# Initialize database tables if they don't exist
+# Initialize database tables and create admin user if they don't exist
 # Note: In serverless, /tmp is ephemeral, so data won't persist between deployments
 # For production, consider using Vercel Postgres or another database service
-with app.app_context():
+def initialize_database():
+    """Initialize database and create admin user"""
     try:
+        # Create all database tables
         db.create_all()
+        # Create admin user (username: admin, password: admin123)
+        create_admin_user()
+        print("Database and admin user initialized successfully")
+        return True
     except Exception as e:
-        print(f"Database initialization note: {e}")
+        print(f"Database initialization error: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+
+# Initialize on module load
+with app.app_context():
+    initialize_database()
 
 # Export the app for Vercel
 # Vercel Python runtime automatically handles WSGI applications
